@@ -30,10 +30,10 @@ jobs:
           sdkmanager "platforms;android-35"
           sdkmanager "build-tools;35.0.0"
 
-      - name: Install Gradle
+      - name: Install Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
+          gradle-version: "8.11.1"
 
       - name: Find and extract TYRO KANJI ZIP
         shell: bash
@@ -51,8 +51,7 @@ jobs:
             exit 1
           fi
 
-          echo "Using ZIP:"
-          echo "$ZIP_FILE"
+          echo "Using ZIP: $ZIP_FILE"
 
           rm -rf "$GITHUB_WORKSPACE/tyro_extracted"
           mkdir -p "$GITHUB_WORKSPACE/tyro_extracted"
@@ -72,50 +71,28 @@ jobs:
             -print -quit | xargs -r dirname)
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: settings.gradle(.kts) not found."
-            echo ""
-            echo "Extracted project:"
-            find "$GITHUB_WORKSPACE/tyro_extracted" \
-              -maxdepth 5 \
-              -type f | sort
+            echo "ERROR: Gradle project not found."
             exit 1
           fi
 
-          echo "Gradle project found:"
+          echo "Project found at:"
           echo "$PROJECT_DIR"
 
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
-      - name: Check Gradle project
+      - name: Check Gradle version
         working-directory: ${{ steps.project.outputs.dir }}
         run: |
-          echo "===== PROJECT ====="
-          pwd
-
-          echo ""
-          echo "===== FILES ====="
-          ls -la
-
-          echo ""
-          echo "===== GRADLE FILES ====="
-          find . -maxdepth 3 \
-            \( -name "build.gradle*" \
-            -o -name "settings.gradle*" \
-            -o -name "gradle.properties" \) \
-            -print
+          gradle --version
 
       - name: Build TYRO KANJI
         working-directory: ${{ steps.project.outputs.dir }}
         run: |
-          set -e
-
-          echo "Building TYRO KANJI..."
-
           gradle :app:assembleDebug \
             --no-daemon \
             --stacktrace
 
-      - name: Find generated APK
+      - name: Find APK
         id: apk
         working-directory: ${{ steps.project.outputs.dir }}
         shell: bash
@@ -129,16 +106,10 @@ jobs:
 
           if [ -z "$APK" ]; then
             echo "ERROR: APK was not generated."
-
-            echo ""
-            echo "Build output:"
-            find app/build/outputs \
-              -type f 2>/dev/null || true
-
             exit 1
           fi
 
-          echo "APK successfully created:"
+          echo "APK successfully generated:"
           echo "$APK"
 
           echo "path=$APK" >> "$GITHUB_OUTPUT"
