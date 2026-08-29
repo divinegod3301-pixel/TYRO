@@ -55,6 +55,14 @@ jobs:
           echo "Project found at: $PROJECT_DIR"
           echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
 
+      - name: Upload extracted source for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: TYRO-extracted-source-${{ github.run_id }}
+          path: ${{ steps.project.outputs.dir }}
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Apply compile-safe source fixes
         working-directory: ${{ steps.project.outputs.dir }}
         shell: bash
@@ -62,13 +70,9 @@ jobs:
           set -euo pipefail
           FILE="app/src/main/java/com/tyro/kanji/MainActivity.kt"
           test -f "$FILE" || { echo "ERROR: MainActivity.kt missing"; exit 1; }
-          # Kotlin requires the Float conversion function to be invoked.
           sed -i 's/\.toFloat\([^()]\|$\)/.toFloat()\1/g' "$FILE"
-          # Keep the known ThemeChoice calls type-correct.
           sed -i 's/ThemeChoice("Sunset (Dark)", true, selectedDark)/ThemeChoice("Sunset (Dark)", "dark", selectedDark)/g' "$FILE"
           sed -i 's/ThemeChoice("Daylight (Light)", false, !selectedDark)/ThemeChoice("Daylight (Light)", "light", !selectedDark)/g' "$FILE"
-          echo "Verified relevant source fixes:"
-          grep -n -E 'ThemeChoice\(|toFloat' "$FILE" | head -80 || true
 
       - name: Check Gradle version
         working-directory: ${{ steps.project.outputs.dir }}
